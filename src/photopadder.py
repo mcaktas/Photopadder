@@ -4,6 +4,8 @@ from PIL import Image
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, colorchooser
+from tkinter import ttk
+
 
 
 # ------------ Core logic ------------
@@ -128,22 +130,10 @@ class PadApp:
         self.root = root
         root.title("Print Ready Pad")
 
-        # ----- Menu Bar -----
-        menubar = tk.Menu(root)
+        # Slightly nicer default size
+        root.minsize(520, 380)
 
-        # File Menu
-        file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Close", command=root.quit)
-        menubar.add_cascade(label="File", menu=file_menu)
-
-        # About Menu
-        about_menu = tk.Menu(menubar, tearoff=0)
-        about_menu.add_command(label="About", command=self.show_about)
-        menubar.add_cascade(label="About", menu=about_menu)
-
-        root.config(menu=menubar)
-        # ----- End Menu Bar -----
-
+        # State variables
         self.input_dir_var = tk.StringVar()
         self.output_dir_var = tk.StringVar()
         self.border_var = tk.StringVar(value="0")
@@ -153,7 +143,6 @@ class PadApp:
         self.border_color_rgb = (255, 255, 255)
         self.border_color_hex = "#FFFFFF"
 
-        # Aspect ratio options (short:long), special strings for Even/Custom
         self.ratio_options = {
             "2:3 (classic 35mm)": (2, 3),
             "4:5 (common print)": (4, 5),
@@ -167,48 +156,116 @@ class PadApp:
         self.overwrite_all = False
         self.skip_all = False
 
-        # UI --- Input folder
-        tk.Label(root, text="Input folder:").grid(row=0, column=0, sticky="w", padx=5, pady=3)
-        tk.Entry(root, textvariable=self.input_dir_var, width=50).grid(row=0, column=1, padx=5, pady=3)
-        tk.Button(root, text="Browse", command=self.browse_input).grid(row=0, column=2, padx=5, pady=3)
+        # ----- Menu Bar -----
+        menubar = tk.Menu(root)
 
-        # Output folder
-        tk.Label(root, text="Output folder:").grid(row=1, column=0, sticky="w", padx=5, pady=3)
-        tk.Entry(root, textvariable=self.output_dir_var, width=50).grid(row=1, column=1, padx=5, pady=3)
-        tk.Button(root, text="Browse", command=self.browse_output).grid(row=1, column=2, padx=5, pady=3)
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Close", command=root.quit)
+        menubar.add_cascade(label="File", menu=file_menu)
 
-        # Select preset ratio
-        tk.Label(root, text="Aspect ratio (short:long):").grid(row=2, column=0, sticky="w", padx=5, pady=3)
-        self.ratio_menu = tk.OptionMenu(root, self.ratio_label_var, *self.ratio_options.keys())
-        self.ratio_menu.grid(row=2, column=1, sticky="w", padx=5, pady=3)
+        about_menu = tk.Menu(menubar, tearoff=0)
+        about_menu.add_command(label="About", command=self.show_about)
+        menubar.add_cascade(label="About", menu=about_menu)
 
-        # Custom ratio
-        tk.Label(root, text="Custom ratio (e.g. 3:7):").grid(row=3, column=0, sticky="w", padx=5, pady=3)
-        self.custom_ratio_entry = tk.Entry(root, textvariable=self.custom_ratio_var, width=10, state=tk.DISABLED)
-        self.custom_ratio_entry.grid(row=3, column=1, sticky="w", padx=5, pady=3)
+        root.config(menu=menubar)
+        # ----- End Menu Bar -----
 
-        # Extra border
-        tk.Label(root, text="Extra border (%):").grid(row=4, column=0, sticky="w", padx=5, pady=3)
-        tk.Entry(root, textvariable=self.border_var, width=10).grid(row=4, column=1, sticky="w", padx=5, pady=3)
+        # Use a main frame for padding
+        main = ttk.Frame(root, padding=10)
+        main.grid(row=0, column=0, sticky="nsew")
+        root.columnconfigure(0, weight=1)
+        root.rowconfigure(0, weight=1)
 
-        # Border color picker
-        tk.Label(root, text="Padding color:").grid(row=5, column=0, sticky="w", padx=5, pady=3)
-        self.color_label = tk.Label(root, text=self.border_color_hex, bg=self.border_color_hex, width=10)
-        self.color_label.grid(row=5, column=1, sticky="w", padx=5, pady=3)
-        tk.Button(root, text="Pick", command=self.pick_color).grid(row=5, column=2, padx=5, pady=3)
+        # === Section 1: Source / Output ===
+        src_frame = ttk.LabelFrame(main, text="Source & Destination", padding=10)
+        src_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        src_frame.columnconfigure(1, weight=1)
 
-        # Metadata checkbox
-        tk.Checkbutton(
-            root,
+        ttk.Label(src_frame, text="Input folder:").grid(row=0, column=0, sticky="w")
+        ttk.Entry(src_frame, textvariable=self.input_dir_var, width=45).grid(
+            row=0, column=1, sticky="ew", padx=5
+        )
+        ttk.Button(src_frame, text="Browse…", command=self.browse_input).grid(
+            row=0, column=2
+        )
+
+        ttk.Label(src_frame, text="Output folder:").grid(row=1, column=0, sticky="w", pady=(5, 0))
+        ttk.Entry(src_frame, textvariable=self.output_dir_var, width=45).grid(
+            row=1, column=1, sticky="ew", padx=5, pady=(5, 0)
+        )
+        ttk.Button(src_frame, text="Browse…", command=self.browse_output).grid(
+            row=1, column=2, pady=(5, 0)
+        )
+
+        # === Section 2: Aspect & Border ===
+        aspect_frame = ttk.LabelFrame(main, text="Aspect & Border", padding=10)
+        aspect_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+        aspect_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(aspect_frame, text="Aspect ratio:").grid(row=0, column=0, sticky="w")
+        self.ratio_menu = ttk.OptionMenu(
+            aspect_frame, self.ratio_label_var, self.ratio_label_var.get(), *self.ratio_options.keys()
+        )
+        self.ratio_menu.grid(row=0, column=1, sticky="w", padx=5)
+
+        ttk.Label(aspect_frame, text="Custom ratio (e.g. 3:7):").grid(
+            row=1, column=0, sticky="w", pady=(5, 0)
+        )
+        self.custom_ratio_entry = ttk.Entry(
+            aspect_frame, textvariable=self.custom_ratio_var, width=10, state=tk.DISABLED
+        )
+        self.custom_ratio_entry.grid(row=1, column=1, sticky="w", padx=5, pady=(5, 0))
+
+        ttk.Label(aspect_frame, text="Extra border (%):").grid(
+            row=2, column=0, sticky="w", pady=(5, 0)
+        )
+        ttk.Entry(aspect_frame, textvariable=self.border_var, width=10).grid(
+            row=2, column=1, sticky="w", padx=5, pady=(5, 0)
+        )
+
+        ttk.Label(aspect_frame, text="Padding color:").grid(
+            row=3, column=0, sticky="w", pady=(5, 0)
+        )
+        self.color_label = tk.Label(
+            aspect_frame,
+            text=self.border_color_hex,
+            bg=self.border_color_hex,
+            width=10,
+            relief="groove",
+            padx=5,
+            pady=3
+        )
+
+        self.color_label.grid(row=3, column=1, sticky="w", padx=5, pady=(5, 0))
+        ttk.Button(aspect_frame, text="Pick…", command=self.pick_color).grid(
+            row=3, column=2, padx=5, pady=(5, 0)
+        )
+
+        # Manually fix ttk.Label background for color box
+        # On some themes, background may be ignored; using regular tk.Label is also fine if needed.
+
+        # === Section 3: Options & Run ===
+        options_frame = ttk.LabelFrame(main, text="Options", padding=10)
+        options_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        options_frame.columnconfigure(0, weight=1)
+
+        ttk.Checkbutton(
+            options_frame,
             text="Preserve EXIF + DPI (ICC always preserved)",
             variable=self.preserve_extra_metadata_var,
-        ).grid(row=6, column=0, columnspan=3, sticky="w", padx=5, pady=3)
+        ).grid(row=0, column=0, sticky="w")
 
-        # Run
-        tk.Button(root, text="Run", command=self.run, height=2).grid(row=7, column=0, columnspan=3, pady=10)
+        # Status + Run button row
+        bottom_frame = ttk.Frame(main, padding=(0, 5, 0, 0))
+        bottom_frame.grid(row=3, column=0, sticky="ew")
+        bottom_frame.columnconfigure(0, weight=1)
 
-        self.status_label = tk.Label(root, text="", fg="blue")
-        self.status_label.grid(row=8, column=0, columnspan=3, pady=5)
+        self.status_label = ttk.Label(bottom_frame, text="", foreground="blue")
+        self.status_label.grid(row=0, column=0, sticky="w")
+
+        ttk.Button(bottom_frame, text="Run", command=self.run).grid(
+            row=0, column=1, sticky="e", padx=(10, 0)
+        )
 
         # React to dropdown changes (enable/disable custom ratio)
         self.ratio_label_var.trace_add("write", self.on_ratio_change)
