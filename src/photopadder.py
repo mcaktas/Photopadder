@@ -12,8 +12,6 @@ from tkinter import ttk
 
 # ------------ Core logic ------------
 
-import math
-
 def compute_canvas_sizes_no_resize(size, short_side, long_side):
     """
     Given image size (w, h) and target aspect ratio short:long (e.g. 2:3),
@@ -82,19 +80,20 @@ def process_image(
 
     inner_canvas = Image.new("RGB", (canvas_w, canvas_h), bg_color)
 
+    offset_x = (canvas_w - img_rgb.width) // 2
+    offset_y = (canvas_h - img_rgb.height) // 2
 
-    offset_x = (canvas_w - img.width) // 2
-    offset_y = (canvas_h - img.height) // 2
     inner_canvas.paste(img_rgb, (offset_x, offset_y))
 
     # Step 2 — optional outer border
     final_canvas = inner_canvas
     if border_percent and border_percent > 0:
         factor = 1 + border_percent
-        final_w = int(canvas_w * factor)
-        final_h = int(canvas_h * factor)
+        final_w = math.ceil(canvas_w * factor)
+        final_h = math.ceil(canvas_h * factor)
 
-        final_canvas = Image.new(mode, (final_w, final_h), bg_color)
+        final_canvas = Image.new("RGB", (final_w, final_h), bg_color)
+
         ox = (final_w - canvas_w) // 2
         oy = (final_h - canvas_h) // 2
         final_canvas.paste(inner_canvas, (ox, oy))
