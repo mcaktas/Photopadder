@@ -301,15 +301,56 @@ class PadApp:
         if self.skip_all:
             return False
 
-        msg = f"File exists:\n{filepath}\n\nOverwrite?"
-        choice = messagebox.askyesnocancel("Overwrite?", msg)
+        result = {"choice": None}
 
-        if choice is True:
+        dialog = tk.Toplevel(self.root)
+        dialog.title("File exists")
+        dialog.resizable(False, False)
+        dialog.grab_set()  # modal
+
+        tk.Label(
+            dialog,
+            text=f"File already exists:\n\n{filepath}",
+            justify="left",
+            wraplength=380,
+        ).pack(padx=15, pady=(15, 10))
+
+        def choose(value):
+            result["choice"] = value
+            dialog.destroy()
+
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(pady=10)
+
+        ttk.Button(btn_frame, text="Overwrite", width=14,
+                   command=lambda: choose("overwrite")).grid(row=0, column=0, padx=5)
+        ttk.Button(btn_frame, text="Skip", width=14,
+                   command=lambda: choose("skip")).grid(row=0, column=1, padx=5)
+
+        ttk.Button(btn_frame, text="Overwrite all", width=14,
+                   command=lambda: choose("overwrite_all")).grid(row=1, column=0, padx=5, pady=5)
+        ttk.Button(btn_frame, text="Skip all", width=14,
+                   command=lambda: choose("skip_all")).grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Button(dialog, text="Cancel", width=12,
+                   command=lambda: choose("cancel")).pack(pady=(0, 10))
+
+        self.root.wait_window(dialog)
+
+        choice = result["choice"]
+
+        if choice == "overwrite":
             return True
-        if choice is None:
-            return None
-        if choice is False:
+        if choice == "skip":
             return False
+        if choice == "overwrite_all":
+            self.overwrite_all = True
+            return True
+        if choice == "skip_all":
+            self.skip_all = True
+            return False
+
+        return None  # cancel
 
     def show_about(self):
         import webbrowser
@@ -353,6 +394,8 @@ class PadApp:
         output_dir = self.output_dir_var.get().strip()
         border_str = self.border_var.get().strip()
         preserve_extra_metadata = self.preserve_extra_metadata_var.get()
+        self.overwrite_all = False
+        self.skip_all = False
 
         if not os.path.isdir(input_dir):
             messagebox.showerror("Error", "Invalid input folder.")
