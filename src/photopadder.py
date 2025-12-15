@@ -151,6 +151,7 @@ class PadApp:
 
         self.overwrite_all = False
         self.skip_all = False
+        self.cancel_requested = False
 
         # ----- Menu Bar -----
         menubar = tk.Menu(root)
@@ -261,6 +262,10 @@ class PadApp:
 
         self.run_button = ttk.Button(bottom_frame, text="Run", command=self.run)
         self.run_button.grid(row=0, column=1, sticky="e", padx=(10, 0))
+
+        self.cancel_button = ttk.Button(bottom_frame, text="Cancel", command=self.request_cancel, state=tk.DISABLED)
+        self.cancel_button.grid(row=0, column=2, sticky="e", padx=(10, 0))
+
         # Progress bar (hidden until run)
         self.progress = ttk.Progressbar(main, mode="determinate")
         self.progress.grid(row=4, column=0, sticky="ew", padx=5, pady=(0, 5))
@@ -390,8 +395,14 @@ class PadApp:
 
     def set_busy(self, busy: bool):
         self.run_button.config(state=(tk.DISABLED if busy else tk.NORMAL))
+        self.cancel_button.config(state=(tk.NORMAL if busy else tk.DISABLED))
         self.root.config(cursor=("watch" if busy else ""))
-        self.root.update_idletasks()
+        self.root.update()  # process UI events immediately
+
+    def request_cancel(self):
+        self.cancel_requested = True
+        self.status_label.config(text="Cancelling… (finishing current file)")
+        self.root.update()  # ensure message appears instantly
 
     def run(self):
         input_dir = self.input_dir_var.get().strip()
@@ -400,6 +411,7 @@ class PadApp:
         preserve_extra_metadata = self.preserve_extra_metadata_var.get()
         self.overwrite_all = False
         self.skip_all = False
+        self.cancel_requested = False
 
         if not os.path.isdir(input_dir):
             messagebox.showerror("Error", "Invalid input folder.")
@@ -460,10 +472,14 @@ class PadApp:
         self.progress.config(maximum=total, value=0)
         self.progress.grid()
         self.status_label.config(text=f"Processing 0/{total}...")
-        self.root.update_idletasks()
+        self.root.update()
+
 
         try:
             for i, fname in enumerate(files, start=1):
+                if self.cancel_requested:
+                    cancelled = True
+                    break
                 in_path = os.path.join(input_dir, fname)
                 name, ext = os.path.splitext(fname)
                 out_path = os.path.join(output_dir, f"{name}_padded{ext}")
@@ -476,7 +492,8 @@ class PadApp:
                     if res is False:
                         self.progress["value"] = i
                         self.status_label.config(text=f"Skipping {i}/{total}: {fname}")
-                        self.root.update_idletasks()
+                        self.root.update()
+
                         continue
 
                 try:
@@ -498,7 +515,8 @@ class PadApp:
 
                 self.progress["value"] = i
                 self.status_label.config(text=f"{i}/{total}: {fname}")
-                self.root.update_idletasks()
+                self.root.update()
+
         finally:
             self.progress.grid_remove()
             self.set_busy(False)
