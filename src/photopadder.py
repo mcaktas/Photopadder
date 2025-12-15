@@ -1,4 +1,5 @@
 import os
+import math
 from pathlib import Path
 from PIL import Image
 
@@ -8,7 +9,10 @@ from tkinter import ttk
 
 
 
+
 # ------------ Core logic ------------
+
+import math
 
 def compute_canvas_sizes_no_resize(size, short_side, long_side):
     """
@@ -16,39 +20,30 @@ def compute_canvas_sizes_no_resize(size, short_side, long_side):
     returns the minimal canvas (W, H) that:
       - keeps the original image size unchanged
       - only adds padding
-      - has aspect ratio long/short on the long side.
+      - has the target aspect ratio (long/short)
     """
     w, h = size
+
+    if w <= 0 or h <= 0:
+        raise ValueError("Invalid image size")
+
     target_ratio = long_side / short_side
+    current_ratio = w / h
 
-    if w >= h:
-        # Landscape
-        current_ratio = w / h
-        if abs(current_ratio - target_ratio) < 1e-6:
-            return w, h
-        elif current_ratio > target_ratio:
-            # too wide → increase height
-            new_h = int((w / target_ratio) + 0.9999)
-            new_w = w
-        else:
-            # too tall → increase width
-            new_w = int((h * target_ratio) + 0.9999)
-            new_h = h
+    if abs(current_ratio - target_ratio) < 1e-6:
+        return w, h
+
+    if current_ratio > target_ratio:
+        # Image is too wide → increase height
+        new_w = w
+        new_h = math.ceil(w / target_ratio)
     else:
-        # Portrait
-        current_ratio = h / w
-        if abs(current_ratio - target_ratio) < 1e-6:
-            return w, h
-        elif current_ratio > target_ratio:
-            # too tall → increase width
-            new_w = int((h / target_ratio) + 0.9999)
-            new_h = h
-        else:
-            # too wide → increase height
-            new_h = int((w * target_ratio) + 0.9999)
-            new_w = w
+        # Image is too tall → increase width
+        new_h = h
+        new_w = math.ceil(h * target_ratio)
 
-    return max(new_w, w), max(new_h, h)
+    return new_w, new_h
+
 
 
 
