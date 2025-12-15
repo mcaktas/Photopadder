@@ -128,7 +128,7 @@ def process_image(
 class PadApp:
     def __init__(self, root):
         self.root = root
-        root.title("Print Ready Pad")
+        root.title("Photopadder")
 
         # Slightly nicer default size
         root.minsize(520, 380)
@@ -315,11 +315,11 @@ class PadApp:
         import webbrowser
 
         top = tk.Toplevel(self.root)
-        top.title("About Print Ready Pad")
+        top.title("Photopadder")
         top.geometry("420x260")
         top.resizable(False, False)
 
-        title = tk.Label(top, text="Print Ready Pad", font=("Arial", 14, "bold"))
+        title = tk.Label(top, text="Photopadder", font=("Arial", 14, "bold"))
         title.pack(pady=(10, 0))
 
         subtitle = tk.Label(top, text="A simple tool for adding clean borders and print-ready ratios.",
