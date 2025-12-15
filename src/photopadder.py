@@ -448,11 +448,14 @@ class PadApp:
             messagebox.showinfo("Info", "No images found.")
             return
 
+        files.sort()  # deterministic order
+
         self.set_busy(True)
 
         count = 0
         total = len(files)
         cancelled = False
+        failed = []  # list of (filename, error_message)
 
         self.progress.config(maximum=total, value=0)
         self.progress.grid()
@@ -489,21 +492,36 @@ class PadApp:
                     )
                     count += 1
                 except Exception as e:
-                    print(f"Error processing {fname}: {e}")
+                    err = str(e) or repr(e)
+                    failed.append((fname, err))
+                    print(f"Error processing {fname}: {err}")
 
                 self.progress["value"] = i
-                self.status_label.config(text=f"Processing {i}/{total}: {fname}")
+                self.status_label.config(text=f"{i}/{total}: {fname}")
                 self.root.update_idletasks()
         finally:
             self.progress.grid_remove()
             self.set_busy(False)
 
-        if cancelled:
-            self.status_label.config(text=f"Cancelled. Processed {count} images.")
-            return
+        title = "Cancelled" if cancelled else "Finished"
+        status_prefix = "Cancelled." if cancelled else "Done!"
 
-        self.status_label.config(text=f"Done! Processed {count} images.")
-        messagebox.showinfo("Finished", f"Processed {count} images.")
+        if failed:
+            lines = [f"Processed: {count}", f"Failed: {len(failed)}", ""]
+            lines.append("Failed files:")
+            for fname, err in failed[:20]:
+                lines.append(f"• {fname} — {err}")
+            if len(failed) > 20:
+                lines.append(f"...and {len(failed) - 20} more.")
+
+            msg = "\n".join(lines)
+            self.status_label.config(
+                text=f"{status_prefix} Processed {count}, failed {len(failed)}."
+            )
+            messagebox.showwarning(f"{title} (with errors)", msg)
+        else:
+            self.status_label.config(text=f"{status_prefix} Processed {count} images.")
+            messagebox.showinfo(title, f"Processed {count} images.")
 
 
 if __name__ == "__main__":
