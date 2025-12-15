@@ -78,12 +78,14 @@ def process_image(
             img.size, ratio_short, ratio_long
         )
 
-    mode = img.mode if img.mode in ("RGB", "RGBA", "L") else "RGB"
-    inner_canvas = Image.new(mode, (canvas_w, canvas_h), bg_color)
+    img_rgb = img.convert("RGB")
+
+    inner_canvas = Image.new("RGB", (canvas_w, canvas_h), bg_color)
+
 
     offset_x = (canvas_w - img.width) // 2
     offset_y = (canvas_h - img.height) // 2
-    inner_canvas.paste(img, (offset_x, offset_y))
+    inner_canvas.paste(img_rgb, (offset_x, offset_y))
 
     # Step 2 — optional outer border
     final_canvas = inner_canvas
