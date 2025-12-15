@@ -263,9 +263,12 @@ class PadApp:
         self.status_label = ttk.Label(bottom_frame, text="", foreground="blue")
         self.status_label.grid(row=0, column=0, sticky="w")
 
-        ttk.Button(bottom_frame, text="Run", command=self.run).grid(
-            row=0, column=1, sticky="e", padx=(10, 0)
-        )
+        self.run_button = ttk.Button(bottom_frame, text="Run", command=self.run)
+        self.run_button.grid(row=0, column=1, sticky="e", padx=(10, 0))
+        # Progress bar (hidden until run)
+        self.progress = ttk.Progressbar(main, mode="determinate")
+        self.progress.grid(row=4, column=0, sticky="ew", padx=5, pady=(0, 5))
+        self.progress.grid_remove()  # hide initially
 
         # React to dropdown changes (enable/disable custom ratio)
         self.ratio_label_var.trace_add("write", self.on_ratio_change)
@@ -389,6 +392,11 @@ class PadApp:
 
         tk.Button(top, text="Close", command=top.destroy).pack(pady=10)
 
+    def set_busy(self, busy: bool):
+        self.run_button.config(state=(tk.DISABLED if busy else tk.NORMAL))
+        self.root.config(cursor=("watch" if busy else ""))
+        self.root.update_idletasks()
+
     def run(self):
         input_dir = self.input_dir_var.get().strip()
         output_dir = self.output_dir_var.get().strip()
@@ -421,7 +429,6 @@ class PadApp:
 
         if label == "Even (no ratio padding)":
             even_mode = True
-
         elif label == "Custom":
             custom = self.custom_ratio_var.get().strip()
             if not custom:
@@ -433,7 +440,6 @@ class PadApp:
             except:
                 messagebox.showerror("Error", "Invalid custom ratio. Use format e.g. 3:7")
                 return
-
         else:
             ratio_short, ratio_long = self.ratio_options[label]
 
@@ -446,37 +452,59 @@ class PadApp:
             messagebox.showinfo("Info", "No images found.")
             return
 
-        self.status_label.config(text="Processing...")
-        self.root.update_idletasks()
+        self.set_busy(True)
 
         count = 0
+        total = len(files)
+        cancelled = False
 
-        for fname in files:
-            in_path = os.path.join(input_dir, fname)
-            name, ext = os.path.splitext(fname)
-            out_path = os.path.join(output_dir, f"{name}_padded{ext}")
+        self.progress.config(maximum=total, value=0)
+        self.progress.grid()
+        self.status_label.config(text=f"Processing 0/{total}...")
+        self.root.update_idletasks()
 
-            if os.path.exists(out_path):
-                res = self.ask_overwrite(out_path)
-                if res is None:
-                    break
-                if res is False:
-                    continue
+        try:
+            for i, fname in enumerate(files, start=1):
+                in_path = os.path.join(input_dir, fname)
+                name, ext = os.path.splitext(fname)
+                out_path = os.path.join(output_dir, f"{name}_padded{ext}")
 
-            try:
-                process_image(
-                    in_path,
-                    out_path,
-                    ratio_short=ratio_short,
-                    ratio_long=ratio_long,
-                    border_percent=border_percent,
-                    bg_color=self.border_color_rgb,
-                    preserve_extra_metadata=preserve_extra_metadata,
-                    even_mode=even_mode,
-                )
-                count += 1
-            except Exception as e:
-                print(f"Error processing {fname}: {e}")
+                if os.path.exists(out_path):
+                    res = self.ask_overwrite(out_path)
+                    if res is None:
+                        cancelled = True
+                        break
+                    if res is False:
+                        self.progress["value"] = i
+                        self.status_label.config(text=f"Skipping {i}/{total}: {fname}")
+                        self.root.update_idletasks()
+                        continue
+
+                try:
+                    process_image(
+                        in_path,
+                        out_path,
+                        ratio_short=ratio_short,
+                        ratio_long=ratio_long,
+                        border_percent=border_percent,
+                        bg_color=self.border_color_rgb,
+                        preserve_extra_metadata=preserve_extra_metadata,
+                        even_mode=even_mode,
+                    )
+                    count += 1
+                except Exception as e:
+                    print(f"Error processing {fname}: {e}")
+
+                self.progress["value"] = i
+                self.status_label.config(text=f"Processing {i}/{total}: {fname}")
+                self.root.update_idletasks()
+        finally:
+            self.progress.grid_remove()
+            self.set_busy(False)
+
+        if cancelled:
+            self.status_label.config(text=f"Cancelled. Processed {count} images.")
+            return
 
         self.status_label.config(text=f"Done! Processed {count} images.")
         messagebox.showinfo("Finished", f"Processed {count} images.")
